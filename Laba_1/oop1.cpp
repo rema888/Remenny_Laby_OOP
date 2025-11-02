@@ -430,7 +430,7 @@ int main()
     std::cout << "ar4 > ar5: " << (ar4 > ar5) << std::endl;
     std::cout << "ar4 >= ar5: " << (ar4 >= ar5) << std::endl;
 
-    AngleRange ar6(Angle::fromDegrees(0), Angle::fromDegrees(90));
+    AngleRange ar6(Angle::fromDegrees(0), Angle::fromDegrees(90)); 
     AngleRange ar7(Angle::fromDegrees(60), Angle::fromDegrees(130));
     Angle test_angle = Angle::fromDegrees(40);
     std::cout << "40° in ar6? " << ar6.contains(test_angle) << std::endl;  // Проверка вхождения угла
