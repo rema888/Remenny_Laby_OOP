@@ -88,7 +88,7 @@ class SocketHandler : public ILogHandler
             }
         }
 };
-
+ 
 // Имитация: сохраняет локально, как "загруженный файл"
 class FtpHandler : public ILogHandler 
 {

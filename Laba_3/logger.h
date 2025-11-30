@@ -25,7 +25,7 @@ class Logger
             , formatters_(std::move(formatters))
             , handlers_(std::move(handlers))
         {}
-
+ 
    
         void log(LogLevel level, const std::string& text) 
         {

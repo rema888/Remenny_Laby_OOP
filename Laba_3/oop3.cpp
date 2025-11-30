@@ -41,7 +41,7 @@ int main()
     handlers.push_back(std::make_unique<SyslogHandler>());
     // 5. Имитация FTP-загрузки (сохранит в ftp_example.com_log.txt)
     handlers.push_back(std::make_unique<FtpHandler>("example.com", "user", "pass"));
-
+ 
     // Создаём логгер
     Logger logger(std::move(filters), std::move(formatters), std::move(handlers));
 
