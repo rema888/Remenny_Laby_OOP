@@ -38,7 +38,7 @@ class SimpleLogFilter : public ILogFilter
             return text.find(pattern_) != std::string::npos;
         }
 };
- 
+   
 // Фильтр по регулярному выражению 
 class ReLogFilter : public ILogFilter 
 {

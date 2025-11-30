@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-
+ 
 // Подключаем все заголовки
 #include "loglevel.h"
 #include "ilogfilter.h"

@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
- 
+  
 class SimpleFormatter : public ILogFormatter 
 {
     public:

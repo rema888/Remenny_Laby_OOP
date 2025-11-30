@@ -2,7 +2,7 @@
 
 #include "loglevel.h"
 #include <string>
-
+  
 class ILogFormatter 
 {
     public:

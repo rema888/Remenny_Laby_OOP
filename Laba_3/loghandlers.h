@@ -38,7 +38,7 @@ class FileHandler : public ILogHandler
             }
         }
 };
-
+ 
 // Имитация записи в системные логи
 class SyslogHandler : public ILogHandler 
 {
