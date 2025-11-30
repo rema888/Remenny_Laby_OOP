@@ -1,3 +1,0 @@
-[FTP MOCK] [WARN] [2025.11.30 13:43:43] disk almost full
-[FTP MOCK] [WARN] [2025.11.30 13:53:38] disk almost full
-[FTP MOCK] [WARN] [2025.11.30 14:04:27] disk almost full
