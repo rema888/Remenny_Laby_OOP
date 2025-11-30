@@ -1,0 +1,3 @@
+C:/Git/Remenny_Laby_Oop/Laba_3/build/CMakeFiles/RemennyTest.dir
+C:/Git/Remenny_Laby_Oop/Laba_3/build/CMakeFiles/ALL_BUILD.dir
+C:/Git/Remenny_Laby_Oop/Laba_3/build/CMakeFiles/ZERO_CHECK.dir
