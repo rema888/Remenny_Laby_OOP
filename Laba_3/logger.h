@@ -21,7 +21,7 @@ class Logger
             std::vector<std::unique_ptr<ILogFormatter>> formatters,
             std::vector<std::unique_ptr<ILogHandler>> handlers
         ) 
-            : filters_(std::move(filters))
+            : filters_(std::move(filters))  // Перемещаем векторы из аргументов в поля
             , formatters_(std::move(formatters))
             , handlers_(std::move(handlers))
         {}
@@ -31,6 +31,7 @@ class Logger
         {
             for (const auto& filter : filters_) 
             {
+                // Если хотя бы один фильтр вернёт false
                 if (!filter->match(level, text))           
                     return; // сообщение отклонено       
             }
@@ -39,17 +40,28 @@ class Logger
             std::string formatted_text = text;
             for (const auto& formatter : formatters_) 
             {
+                // Применяем все форматтеры
                 formatted_text = formatter->format(level, formatted_text);
             }
 
      
             for (const auto& handler : handlers_) 
             {
+                // Отправляем готовое сообщение всем обработчикам
                 handler->handle(level, formatted_text);
             }
         }
 
-        void log_info(const std::string& text)  { log(LogLevel::INFO,  text); }
-        void log_warn(const std::string& text)  { log(LogLevel::WARN,  text); }
-        void log_error(const std::string& text) { log(LogLevel::ERROR, text); }
+        void log_info(const std::string& text)  
+        { 
+            log(LogLevel::Info, text); 
+        }
+        void log_warn(const std::string& text)  
+        { 
+            log(LogLevel::Warn, text); 
+        }
+        void log_error(const std::string& text) 
+        { 
+            log(LogLevel::Error, text); 
+        }
 };

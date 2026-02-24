@@ -3,9 +3,11 @@
 #include <string>
 
 // Аргументы события: свойство изменилось
-struct PropertyChangedEventArgs : public EventArgs 
+class PropertyChangedEventArgs : public EventArgs 
 {
-    std::string property_name;
+    public: 
 
-    explicit PropertyChangedEventArgs(const std::string& name): property_name(name) {}
+        std::string property_name; // Имя свойства, которое было изменено
+
+        explicit PropertyChangedEventArgs(const std::string& name): property_name(name) {}
 };

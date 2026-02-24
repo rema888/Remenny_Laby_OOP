@@ -5,8 +5,9 @@ template<typename TEventArgs>
 class IEventHandler 
 {
     public:
-
-        virtual void handle(const void* sender, const TEventArgs& args) = 0;
+        // 1й аргумент — указатель на объект, который вызвал событие
+        // 2й аргумент — данные события
+        virtual void handle(const void* sender, TEventArgs& args) = 0;
 
         virtual ~IEventHandler() = default;
-};
+}; 

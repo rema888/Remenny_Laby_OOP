@@ -15,16 +15,15 @@ class SimpleFormatter : public ILogFormatter
             std::string level_str;
             switch (level) 
             {
-                case LogLevel::INFO:  level_str = "INFO";  break;
-                case LogLevel::WARN:  level_str = "WARN";  break;
-                case LogLevel::ERROR: level_str = "ERROR"; break;
+                case LogLevel::Info: level_str = "INFO";  break;
+                case LogLevel::Warn: level_str = "WARN";  break;
+                case LogLevel::Error: level_str = "ERROR"; break;
             }
 
-            auto now = std::chrono::system_clock::now();
+            auto now = std::chrono::system_clock::now(); // Получаем текущий момент времени
             auto time_t = std::chrono::system_clock::to_time_t(now);
-            auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 
-            std::ostringstream oss;
+            std::ostringstream oss; // Поток для сборки строки
             oss << std::put_time(std::localtime(&time_t), "%Y.%m.%d %H:%M:%S");
 
             std::string time_str = oss.str();

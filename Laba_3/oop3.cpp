@@ -1,3 +1,4 @@
+#include <C:/Users/Nitro5/vcpkg/installed/x64-mingw-dynamic/include/curl/curl.h> 
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -14,18 +15,13 @@
 
 int main() 
 {
-    // Создаём фильтры
-    auto level_filter = std::make_unique<LevelFilter>(LogLevel::WARN);
-    auto text_filter = std::make_unique<SimpleLogFilter>(std::string("disk"));
-    auto regex_filter = std::make_unique<ReLogFilter>(std::string(R"(full)"));
-
     // Собираем 3 фильтра в список
     std::vector<std::unique_ptr<ILogFilter>> filters;
-    filters.push_back(std::move(level_filter));
-    filters.push_back(std::move(text_filter));
-    filters.push_back(std::move(regex_filter));
+    filters.push_back(std::make_unique<LevelFilter>(LogLevel::Warn));
+    filters.push_back(std::make_unique<SimpleLogFilter>("disk"));
+    filters.push_back(std::make_unique<ReLogFilter>(R"(full)"));
 
-    // Создаём форматтеры 
+    // Создаём форматтер
     std::vector<std::unique_ptr<ILogFormatter>> formatters;
     formatters.push_back(std::make_unique<SimpleFormatter>());
 
@@ -35,26 +31,22 @@ int main()
     handlers.push_back(std::make_unique<ConsoleHandler>());
     // 2. Запись в файл
     handlers.push_back(std::make_unique<FileHandler>("lab3_output.log"));
-    // 3. Имитация отправки по сокету (сохранит в socket_localhost_9999.log)
-    handlers.push_back(std::make_unique<SocketHandler>("localhost", 9999));
-    // 4. Имитация системного лога (сохранит в /var/log/myapp/app.log или аналог)
-    handlers.push_back(std::make_unique<SyslogHandler>());
-    // 5. Имитация FTP-загрузки (сохранит в ftp_example.com_log.txt)
-    handlers.push_back(std::make_unique<FtpHandler>("example.com", "user", "pass"));
+    // 3. Сокет
+    handlers.push_back(std::make_unique<SocketHandler>("127.0.0.1", 9999));
+    // 4. Системный лог (eventvwr.msc)
+    handlers.push_back(std::make_unique<SysLogHandler>());
+    // 5. FTP-загрузка
+    handlers.push_back(std::make_unique<FtpHandler>("127.0.0.1", "User1", "pass"));
  
     // Создаём логгер
     Logger logger(std::move(filters), std::move(formatters), std::move(handlers));
 
-    // Тест
-    // Этот лог не пройдёт: уровень INFO, а фильтр требует WARN
-    logger.log_info("disk space ok");
-
-    // Этот лог пройдет: WARN + содержит "disk" + содержит "full"
+    // WARN + содержит "disk" + содержит "full"
     logger.log_warn("disk almost full");
 
-    // Этот лог не пройдёт: нет слова "disk"
-    logger.log_warn("memory almost full");
+    // Нет слова "disk"
+    logger.log_info("memory almost full");
 
-    // Этот лог не пройдёт: уровень ERROR, а фильтр — только WARN
+    // Уровень ERROR, а фильтр — только WARN
     logger.log_error("disk almost full");
 }

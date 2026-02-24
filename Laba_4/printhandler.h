@@ -7,7 +7,7 @@ class PrintHandler : public IEventHandler<PropertyChangedEventArgs>
 {
     public:
 
-        void handle(const void* sender, const PropertyChangedEventArgs& args) override 
+        void handle(const void* /*sender*/, PropertyChangedEventArgs& args) override 
         {
             std::cout << "Свойство изменилось: " << args.property_name << "\n";
         }

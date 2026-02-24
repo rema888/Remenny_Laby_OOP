@@ -3,7 +3,7 @@
 #include "ilogfilter.h"
 #include <string>
 #include <regex> 
-#include <string>
+
 
 // Фильтр по уровню лога
 class LevelFilter : public ILogFilter 
@@ -27,15 +27,15 @@ class SimpleLogFilter : public ILogFilter
 {
     private:
     
-        std::string pattern_;
+        std::string substr_; 
 
     public:
 
-        explicit SimpleLogFilter(const std::string& pattern) : pattern_(pattern) {}
+        explicit SimpleLogFilter(const std::string& substr) : substr_(substr) {}
 
         bool match(LogLevel /*level*/, const std::string& text) const override 
         {
-            return text.find(pattern_) != std::string::npos;
+            return text.find(substr_) != std::string::npos;
         }
 };
    
@@ -45,7 +45,7 @@ class ReLogFilter : public ILogFilter
     private:
 
         std::regex pattern_;
-        bool valid_ = true;  
+        bool valid_ = true; // успешно ли было создано регулярное выражение
 
     public:
 
@@ -61,9 +61,10 @@ class ReLogFilter : public ILogFilter
             }
         }
 
-        bool match(LogLevel /*level*/, const std::string& text) const override 
+        bool match(LogLevel /*level*/, const std::string& text) const 
         {
-            if (!valid_) return false;
+            if (!valid_) 
+                return false;
             return std::regex_search(text, pattern_);
         }
 };

@@ -1,0 +1,14 @@
+=== Keyboard Session Started ===
+a
+ab
+abc
+ab
+a
+ab
+Volume increased +20% (Current: 70)
+Volume decreased -20% (Current: 50)
+Media Player Launched
+abd
+ab
+Media Player Closed
+=== Keyboard Session Ended ===

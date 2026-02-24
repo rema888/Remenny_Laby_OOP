@@ -1,0 +1,2 @@
+1|Alice Smith|alice_dev|secret123|1|alice.new@mail.com|1|Moscow, Lenina st. 10
+2|Bob Johnson|bob_admin|password_qwerty|1|bob@example.com|0

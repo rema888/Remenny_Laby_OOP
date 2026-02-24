@@ -1,11 +1,12 @@
-#define _USE_MATH_DEFINES // Для числа Пи
-#include <cmath>
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <cmath>
+#include <array>
 #include <vector>
-static constexpr double eps_compare = 1e-10;
-static constexpr double eps_division= 1e-15;
+constexpr double M_PI = 3.14159265358979323846;
+constexpr double eps_compare = 1e-10;
+constexpr double eps_division= 1e-15;
 
 class Angle
 {
@@ -70,7 +71,7 @@ class Angle
         {
             double n1 = normalization(m_radians);
             double n2 = normalization(other.m_radians);
-            if (std::abs(n1 - n2) < eps_compare) // учитываем погрешность, т.к. без неё 0 != 2pi (double - неточный тип)
+            if (std::abs(n1 - n2) < eps_compare) // учитываем погрешность, т.к. double - неточный тип
                 return 0;
             return (n1 < n2) ? -1 : 1;
         }
@@ -106,7 +107,7 @@ class Angle
             return !(*this < other);
         }
 
-        // Операторы преобразования угла к int, str
+        // Операторы преобразования угла к float, int, str
         explicit operator float() const
         {
             return static_cast<float>(m_radians);
@@ -223,6 +224,116 @@ class AngleRange
         bool m_start_in;
         bool m_end_in;
 
+        // Проверяет, является ли промежуток прямым
+        bool isDirect() const 
+        {
+            double s = m_start.normalizedValue();
+            double e = m_end.normalizedValue();
+            return e >= s - eps_compare;
+        }
+
+        // Проверяет, пустой ли промежуток пустым (вырожденным с исключающими границами)
+        bool isEmpty() const 
+        {
+            return m_start == m_end && !m_start_in && !m_end_in;
+        }
+
+        // Разбивает оборачивающийся промежуток на два прямых
+        std::pair<AngleRange, AngleRange> splitIntoDirect() const 
+        {
+            if (isDirect()) 
+            {
+                return { *this, AngleRange() };
+            }
+
+            // Нормализованные значения
+            double s = m_start.normalizedValue();
+            double e = m_end.normalizedValue();
+
+            // Используем угол, чуть меньше 2π, чтобы избежать нормализации в 0 
+            Angle endOfCircle(2.0 * M_PI - 1e-12); 
+
+            // Первая часть: от начального угла до конца круга [s, 360°)
+            AngleRange part1(m_start, endOfCircle, m_start_in, false);
+            // Вторая часть: от начала круга до конечного угла [0°, e]
+            AngleRange part2(Angle(0.0), m_end, true, m_end_in);
+
+            // Возвращаем обе части
+            return { part1, part2 };
+        }
+
+        // Статический метод - вычитаем A - B (прямые промежутки)
+        static std::array<AngleRange, 2> subtractDirect(const AngleRange& A, const AngleRange& B) 
+        {
+            // Для создания пустого промежутка
+            auto makeEmpty = []() 
+            {
+                return AngleRange(Angle(0.0), Angle(0.0), false, false);
+            };
+
+            // Если A пуст, результат пуст
+            if (A.isEmpty()) 
+            {
+                return { makeEmpty(), makeEmpty() };
+            }
+
+            // Нормализованные границы A и B
+            double s1 = A.m_start.normalizedValue();
+            double e1 = A.m_end.normalizedValue();
+            double s2 = B.m_start.normalizedValue();
+            double e2 = B.m_end.normalizedValue();
+
+            // Если B полностью левее или правее A - не пересекаются
+            if (e2 < s1 - eps_compare || s2 > e1 + eps_compare) 
+            {
+                return { A, makeEmpty() };
+            }
+
+            // B покрывает A полностью
+            if (s2 <= s1 + eps_compare && e2 >= e1 - eps_compare) 
+            {
+                // Подготавливаем результат (две точки или пусто)
+                std::array<AngleRange, 2> res{ makeEmpty(), makeEmpty() };
+                size_t i = 0; // индекс для заполнения
+
+                // Проверяем, остаётся ли левая точка A
+                if (A.m_start_in && !(B.m_start_in && std::abs(s1 - s2) < eps_compare)) 
+                {
+                    // Точка остаётся, если A включает её, а B — нет
+                    res[i++] = AngleRange(A.m_start, A.m_start, true, true);
+                }
+                // Проверяем, остаётся ли правая точка A
+                if (A.m_end_in && !(B.m_end_in && std::abs(e1 - e2) < eps_compare)) 
+                {
+                    res[i++] = AngleRange(A.m_end, A.m_end, true, true);
+                }
+                return res;
+            }
+
+            // Если B прилипает слева к A (начинается до/в начале A и заканчивается внутри)
+            if (s2 <= s1 + eps_compare) 
+            {
+                // Остаётся правая часть: (e2, e1]
+                return { AngleRange(Angle(e2), A.m_end, false, A.m_end_in), makeEmpty() };
+            }
+
+            // Если B прилипает справа к A (заканчивается после/в конце A и начинается внутри)
+            if (e2 >= e1 - eps_compare) 
+            {
+                // Остаётся левая часть: [s1, s2)
+                return { AngleRange(A.m_start, Angle(s2), A.m_start_in, false), makeEmpty() };
+            }
+
+            // Если B находится строго внутри A - разбиваем на два
+            return 
+            {
+                // Левая часть: [s1, s2)
+                AngleRange(A.m_start, Angle(s2), A.m_start_in, false),
+                // Правая часть: (e2, e1]
+                AngleRange(Angle(e2), A.m_end, false, A.m_end_in)
+            };
+        }
+
     public:
 
         // Основной конструктор
@@ -233,6 +344,8 @@ class AngleRange
             m_start_in = start_in;
             m_end_in = end_in;
         }
+
+        AngleRange() : m_start(Angle(0.0)), m_end(Angle(0.0)), m_start_in(false), m_end_in(false) {}
 
         // Делегирующие конструкторы
         AngleRange(double start, double end, bool start_in = true, bool end_in = true):
@@ -245,24 +358,31 @@ class AngleRange
             AngleRange(Angle(static_cast<double>(start)), Angle(static_cast<double>(end)), start_in, end_in) {}     
 
         // Строковое представление
-        std::string toString() const
+        std::string toString() const 
         {
+            // Считаем промежуток "пустым", если он вырожденный и обе границы исключены
+            if (m_start == m_end && !m_start_in && !m_end_in) {
+                return "∅"; 
+            }
+            if (m_start == m_end) {
+                return "{" + m_start.toString() + "}";
+            }
             char start_bracket = m_start_in ? '[' : '(';
             char end_bracket = m_end_in ? ']' : ')';
-            return std::string(1, start_bracket) + m_start.toString() + ", " + m_end.toString() + end_bracket;
+            return std::string(1, start_bracket) + m_start.toString() + ", " + m_end.toString() + std::string(1, end_bracket);
         }
 
         std::string repr() const
         {
             return "AngleRange(" + m_start.repr() + ", " + m_end.repr() + ", "
-                    + (m_start_in ? "true" : "false") + ", " + (m_end_in ? "true" : "false");
+                    + (m_start_in ? "true" : "false") + ", " + (m_end_in ? "true" : "false")  + ")";
         }
 
         // Получение длины промежутка
         double length() const
         {
-            double start_norm = m_start.normalization(m_start.getRadians());
-            double end_norm = m_end.normalization(m_end.getRadians());
+            double start_norm = m_start.normalizedValue();
+            double end_norm   = m_end.normalizedValue();
             if (end_norm >= start_norm)
                 return end_norm - start_norm;
             else
@@ -290,11 +410,11 @@ class AngleRange
         // Сравниваем промежутки сначала по длине, потом по количеству включенных граничных точек, потом лексикографическое сравнение
         bool operator<(const AngleRange& other) const
         {
-            double len1 = this->length();
+            double len1 = (*this).length();
             double len2 = other.length();
             if (std::abs(len1 - len2) > eps_compare)
                 return len1 < len2;
-            int inc1 = this->StartEndInCount();
+            int inc1 = (*this).StartEndInCount();
             int inc2 = other.StartEndInCount();
             if (inc1 != inc2)
                 return inc1 < inc2;
@@ -331,7 +451,10 @@ class AngleRange
             double end_n = m_end.normalizedValue();
             double x = angle.normalizedValue();
             // Вспомогательная функция для сравнения с погрешностью
-            auto isEqual = [&](double a, double b) { return std::abs(a - b) < eps_compare; };
+            auto isEqual = [&](double a, double b) 
+            { 
+                return std::abs(a - b) < eps_compare; 
+            };
             // Прямой промежуток
             if (end_n >= start_n - eps_compare)
             {
@@ -358,32 +481,89 @@ class AngleRange
             return contains(other.m_start) && contains(other.m_end);
         }
 
-        // Сложение промежутков
-        std::vector<AngleRange> operator+(const AngleRange& other) const
+        // Объединение множеств: A ∪ B
+        std::array<AngleRange, 2> operator+(const AngleRange& other) const 
         {
-            Angle start = m_start + other.m_start;
-            Angle end = m_end + other.m_end;
-            // Нормализуем итоговые углы
-            double norm_start = start.normalization(start.getRadians());
-            double norm_end   = end.normalization(end.getRadians());
-            bool start_in = m_start_in && other.m_start_in;
-            bool end_in = m_end_in && other.m_end_in;
-            return {AngleRange(Angle(norm_start), Angle(norm_end), start_in, end_in)};
+            // Возвращаем пустой промежуток
+            auto makeEmpty = []() 
+            {
+                return AngleRange(Angle(0.0), Angle(0.0), false, false);
+            };
+
+            // Нормализованные значения
+            double s1 = m_start.normalizedValue();
+            double e1 = m_end.normalizedValue();
+            double s2 = other.m_start.normalizedValue();
+            double e2 = other.m_end.normalizedValue();
+
+            // Если оба промежутка прямые
+            if (e1 >= s1 && e2 >= s2) 
+            {
+                // Проверяет, пересекаются ли промежутки:
+                // e1 < s2 - первый заканчивается до начала второго - нет пересечения,
+                // e2 < s1 - второй заканчивается до начала первого - нет пересечения
+                if (!(e1 < s2 - eps_compare || e2 < s1 - eps_compare)) 
+                {
+                    // Объединяем
+                    double ns = std::min(s1, s2); // Минимальное из двух начал 
+                    double ne = std::max(e1, e2); // Максимальный из двух концов 
+                    // Если новое начало совпадает с началом this → берём флаг включения из this, иначе — из other
+                    bool startIn = (std::abs(ns - s1) < eps_compare) ? m_start_in : other.m_start_in;
+                    bool endIn = (std::abs(ne - e1) < eps_compare) ? m_end_in   : other.m_end_in;
+                    return { AngleRange(Angle(ns), Angle(ne), startIn, endIn), makeEmpty() };
+                }
+            }
+
+            // Если:хотя бы один промежуток оборачивающийся,или промежутки не пересекаются,
+            // то возвращает два исходных промежутка как есть (без объединения)
+            return { *this, other };
         }
 
-        // Вычитание промежутков
-        std::vector<AngleRange> operator-(const AngleRange& other) const
+        // Разность множеств: A \ B
+        std::array<AngleRange, 2> operator-(const AngleRange& other) const 
         {
-            Angle start = m_start - other.m_end;
-            Angle end = m_end - other.m_start;
-            // Нормализуем итоговые углы
-            double norm_start = start.normalization(start.getRadians());
-            double norm_end   = end.normalization(end.getRadians());
-            bool start_in = m_start_in && other.m_start_in;
-            bool end_in = m_end_in && other.m_end_in;
-            return {AngleRange(Angle(norm_start), Angle(norm_end), start_in, end_in)};
+            // Вспомогательная функция для пустого промежутка
+            auto makeEmpty = []() {
+                return AngleRange(Angle(0.0), Angle(0.0), false, false);
+            };
+
+            // Разбиваем текущий промежуток на две прямые части (хвост и голова)
+            auto [a1, a2] = this->splitIntoDirect();
+
+            // Разбиваем вычитаемый промежуток на две прямые части
+            auto [b1, b2] = other.splitIntoDirect();
+
+            // Список для накопления результатов
+            std::vector<AngleRange> results;
+
+            // Добавить непустые промежутки из массива в results
+            auto addIfNotEmpty = [&results](const std::array<AngleRange, 2>& arr) 
+            {
+                if (!arr[0].isEmpty()) 
+                    results.push_back(arr[0]);
+                if (!arr[1].isEmpty()) 
+                    results.push_back(arr[1]);
+            };
+
+            // Вычитаем хвост из хвоста: a1 \ b1
+            addIfNotEmpty(subtractDirect(a1, b1));
+
+            // Вычитаем голову из головы: a2 \ b2 (только если обе части существуют)
+            if (!a2.isEmpty() && !b2.isEmpty()) 
+                addIfNotEmpty(subtractDirect(a2, b2));
+
+            // Подготавливаем финальный результат (максимум 2 промежутка)
+            std::array<AngleRange, 2> final{ makeEmpty(), makeEmpty() };
+
+            // Копируем до двух первых результатов
+            for (size_t i = 0; i < std::min(results.size(), size_t(2)); i++) 
+            {
+                final[i] = results[i];
+            }
+            return final;
         }
 };
+
 int main()
 {
     Angle a1; // Создание по умолчанию
@@ -401,17 +581,17 @@ int main()
     std::cout << "a2: " << a2.toString() << " | " << a2.repr() << std::endl;
     std::cout << "a3: " << a3.toString() << " | " << a3.repr() << std::endl;
 
-    std::cout << "a1 == a3 " << (a1 == a3) << std::endl; // Операторы сравнения
-    std::cout << "a1 != a3 " << (a1 != a3) << std::endl;
-    std::cout << "a1 < a3 " << (a1 < a3) << std::endl;
-    std::cout << "a1 > a3 " << (a1 > a3) << std::endl;
-    std::cout << "a1 <= a3 " << (a1 <= a3) << std::endl;
-    std::cout << "a1 >= a3 " << (a1 >= a3) << std::endl;
+    std::cout << a1.toString() << " == " << a3.toString() << " : " << (a1 == a3) << std::endl; // Операторы сравнения
+    std::cout << a1.toString() << " != " << a3.toString() << " : " << (a1 != a3) << std::endl;
+    std::cout << a1.toString() << " < " << a3.toString() << " : " << (a1 < a3) << std::endl;
+    std::cout << a1.toString() << " > " << a3.toString() << " : " << (a1 > a3) << std::endl;
+    std::cout << a1.toString() << " <= " << a3.toString() << " : " << (a1 <= a3) << std::endl;
+    std::cout << a1.toString() << " >= " << a3.toString() << " : " << (a1 >= a3) << std::endl;
 
-    std::cout << "a2 + a3 = " << (a2 + a3).toString() << std::endl; // + - * /
-    std::cout << "a3 - a2 = " << (a3 - a2).toString() << std::endl;
-    std::cout << "a2 * 2 = " << (a2 * 2).toString() << std::endl;
-    std::cout << "a2 / 2 = " << (a2 / 2).toString() << std::endl;
+    std::cout << a2.toString() << " + " << a3.toString() << " = " << (a2 + a3).toString() << std::endl; // + - * /
+    std::cout << a3.toString() << " - " << a2.toString() << " = " << (a3 - a2).toString() << std::endl; 
+    std::cout << a2.toString() << " * 2 = " << (a2 * 2).toString() << std::endl; 
+    std::cout << a2.toString() << " / 2 = " << (a2 / 2).toString() << std::endl; 
 
     AngleRange ar1(Angle::fromDegrees(0), Angle::fromDegrees(90)); // Создание через градусы и проверка repr
     std::cout << "ar1: " << ar1.repr() << std::endl;
@@ -421,26 +601,31 @@ int main()
     std::cout << "ar3: " << ar3.toString() << std::endl;
    
     AngleRange ar4(Angle::fromDegrees(90), Angle::fromDegrees(180));
+    std::cout << "ar4: " << ar4.toString() << std::endl;
     AngleRange ar5(Angle::fromDegrees(90), Angle::fromDegrees(180), true, false);
-    std::cout << "ar4.length: " << ar4.length() << std::endl; // Длина промежутка
-    std::cout << "ar4 == ar5: " << (ar4 == ar5) << std::endl; // Операторы сравнения
-    std::cout << "ar4 != ar5: " << (ar4 != ar5) << std::endl;
-    std::cout << "ar5 < ar4: " << (ar5 < ar4) << std::endl;
-    std::cout << "ar5 <= ar4: " << (ar5 <= ar4) << std::endl;
-    std::cout << "ar4 > ar5: " << (ar4 > ar5) << std::endl;
-    std::cout << "ar4 >= ar5: " << (ar4 >= ar5) << std::endl;
+    std::cout << "ar5: " << ar5.toString() << std::endl;
 
-    AngleRange ar6(Angle::fromDegrees(0), Angle::fromDegrees(90)); 
-    AngleRange ar7(Angle::fromDegrees(60), Angle::fromDegrees(130));
+    std::cout << ar4.toString() << " length = " << ar4.length() << std::endl; // Длина промежутка
+    std::cout << ar4.toString() << " == " << ar5.toString() << " : " << (ar4 == ar5) << std::endl; // Операторы сравнения
+    std::cout << ar4.toString() << " != " << ar5.toString() << " : " << (ar4 != ar5) << std::endl;
+    std::cout << ar5.toString() << " < " << ar4.toString() << " : " << (ar5 < ar4) << std::endl;
+    std::cout << ar5.toString() << " <= " << ar4.toString() << " : "  << (ar5 <= ar4) << std::endl;
+    std::cout << ar4.toString() << " > " << ar5.toString() << " : "  << (ar4 > ar5) << std::endl;
+    std::cout << ar4.toString() << " >= " << ar5.toString() << " : "  << (ar4 >= ar5) << std::endl;
+
+    AngleRange ar6(Angle::fromDegrees(10), Angle::fromDegrees(40)); 
+    AngleRange ar7(Angle::fromDegrees(10), Angle::fromDegrees(40), false, false);
     Angle test_angle = Angle::fromDegrees(40);
-    std::cout << "40° in ar6? " << ar6.contains(test_angle) << std::endl;  // Проверка вхождения угла
-    std::cout << "40° in ar7? " << ar7.contains(test_angle) << std::endl;
-    AngleRange test_anglerange(Angle::fromDegrees(50), Angle::fromDegrees(80));
-    std::cout << "small in ar6? " << ar6.contains(test_anglerange) << std::endl; // Проверка вхождения промежутка
-    std::cout << "small in ar7? " << ar7.contains(test_anglerange) << std::endl;
+    std::cout << test_angle.toString() << " in " << ar6.toString() << " : " << ar6.contains(test_angle) << std::endl;  // Проверка вхождения угла
+    std::cout << test_angle.toString() << " in " << ar7.toString() << " : " << ar7.contains(test_angle) << std::endl;
 
-    auto sum = ar6 + ar7; // Сложение промежутков
-    std::cout << "ar6 + ar7 = " << sum[0].toString() << std::endl;
-    auto diff = ar6 - ar7; // Вычитание промежутков
-    std::cout << "ar6 - ar7 = " << diff[0].toString() << std::endl;
+    AngleRange test_anglerange(Angle::fromDegrees(80), Angle::fromDegrees(50));
+    std::cout << test_anglerange.toString() << " in " << ar6.toString() << " : " << ar6.contains(test_anglerange) << std::endl; // Проверка вхождения промежутка
+    std::cout << test_anglerange.toString() << " in " << ar7.toString() << " : " << ar7.contains(test_anglerange) << std::endl;
+
+    AngleRange C(Angle::fromDegrees(10), Angle::fromDegrees(50));
+    AngleRange D(Angle::fromDegrees(20), Angle::fromDegrees(60), false, false);
+    auto diff1 = C - D;
+    std::cout << C.toString() << " - " << D.toString() << " = " << diff1[0].toString() << " ∪ " << diff1[1].toString() << std::endl;
+    // [10, 40] - (10, 40) = {10} V {40}
 }

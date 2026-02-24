@@ -1,6 +1,6 @@
 #pragma once
 
-struct EventArgs 
+class EventArgs 
 {
     // Пустой базовый класс
 };
